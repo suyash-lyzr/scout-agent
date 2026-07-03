@@ -68,17 +68,20 @@ function realCmd(cmd) {
   return c.trim();
 }
 // Map a raw shell command → a friendly "thinking" step (platform + label).
+// Detects the tool ANYWHERE in the command (not just the prefix), so a compound
+// like `for r in ...; do gh repo view $r; done` is correctly attributed to GitHub
+// instead of the shell/search bucket.
 function stepFor(cmd) {
   const c = cmd.toLowerCase();
-  if (/^gh\b/.test(c))              return { platform: 'github',    label: 'Searching GitHub' };
-  if (/^twitter\b/.test(c))         return { platform: 'twitter',   label: 'Searching Twitter/X' };
-  if (/opencli\s+reddit/.test(c))   return { platform: 'reddit',    label: 'Browsing Reddit' };
-  if (/opencli\s+facebook/.test(c)) return { platform: 'facebook',  label: 'Browsing Facebook' };
-  if (/opencli\s+instagram/.test(c))return { platform: 'instagram', label: 'Browsing Instagram' };
-  if (/r\.jina\.ai|linkedin/.test(c))return { platform: 'web',      label: 'Reading web page' };
-  if (/mcporter|exa/.test(c))       return { platform: 'search',    label: 'Searching the web' };
-  if (/yt-dlp|youtube/.test(c))     return { platform: 'youtube',   label: 'Fetching YouTube' };
-  return { platform: 'shell', label: 'Running ' + (cmd.split(/\s+/)[0] || 'command') };
+  if (/\btwitter\b/.test(c))         return { platform: 'twitter',   label: 'Searching Twitter/X' };
+  if (/opencli\s+reddit/.test(c))    return { platform: 'reddit',    label: 'Browsing Reddit' };
+  if (/opencli\s+facebook/.test(c))  return { platform: 'facebook',  label: 'Browsing Facebook' };
+  if (/opencli\s+instagram/.test(c)) return { platform: 'instagram', label: 'Browsing Instagram' };
+  if (/\byt-dlp\b|youtube/.test(c))  return { platform: 'youtube',   label: 'Fetching YouTube' };
+  if (/\bgh\b/.test(c))              return { platform: 'github',    label: 'Searching GitHub' };
+  if (/r\.jina\.ai|linkedin/.test(c))return { platform: 'web',       label: 'Reading web page' };
+  if (/mcporter|\bexa\b/.test(c))    return { platform: 'search',    label: 'Searching the web' };
+  return { platform: 'shell', label: 'Working…' };   // pure shell plumbing — not shown / doesn't move the globe
 }
 // GitClaw CLI boilerplate we don't want in the chat bubble.
 const SKIP = /^(Compliance warnings|\s*⚠|scout v\d|Model:|Tools:|Skills:|Type \/|Task started:|Objective:|No matching skills|Step \d+ recorded:|Task [0-9a-f-]{6,}|Skill ".*" confidence|Consider calling skill_learner|Skill loaded\.)/;
@@ -124,7 +127,8 @@ const server = http.createServer((req, res) => {
         if (tool) {
           // Only surface the real internet fetches (`cli`) as friendly "thinking" steps.
           if (tool[1] === 'cli') { const cmd = realCmd(tool[2].replace(/^command:\s*/, ''));
-            if (cmd && !/^\s*(export|cd|source|ls|echo|date|which|pwd|set|:|true|printf|mkdir)\b/.test(cmd)) send({ type: 'step', ...stepFor(cmd) }); }
+            if (cmd && !/^\s*(export|cd|source|ls|echo|date|which|pwd|set|:|true|printf|mkdir)\b/.test(cmd)) {
+              const st = stepFor(cmd); if (st.platform !== 'shell') send({ type: 'step', ...st }); } }
           return;
         }
         if (/^--+\s*$/.test(line)) return;                        // stray separators
@@ -133,6 +137,7 @@ const server = http.createServer((req, res) => {
         const raw = /\t/.test(line)                                // tab-separated CLI output (gh, twitter)
           || /^\s*[\[{"]/.test(line) || /^\s*---/.test(line) || /^\s*<\/?[a-z!]/i.test(line)
           || /^(name|description|license|allowed-tools|metadata|category|risk_tier|ports|author|version|id|text|score|likes|rts|url|time|comments|screenName|username|play|danmaku|bvid):/i.test(line)
+          || /^\s*\d{2,}\s+[\w.-]+\/[\w.-]+\s*$/.test(line)         // raw `gh search` dump: "105731 owner/repo"
           || /^\s{2,}["'\-]/.test(line);
         if (raw) return;
         if (capped) return;
