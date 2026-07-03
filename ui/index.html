@@ -116,6 +116,7 @@
   .body ol>li{padding-left:3px;}.body ol>li::marker{color:var(--primary);font-weight:600;}
   .body code{background:rgba(255,255,255,.06);padding:2px 6px;border-radius:5px;font-size:12.5px;color:#c9cbff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
   .body hr{border:0;border-top:1px solid var(--line);margin:18px 0;}
+  .body .mdrun{display:contents;}
   .caret{display:inline-block;width:6px;height:1.05em;margin-left:2px;vertical-align:text-bottom;border-radius:1px;background:var(--primary);box-shadow:0 0 7px var(--primary);animation:blink 1.05s steps(1) infinite;}
   @keyframes blink{50%{opacity:0;}}
   .body pre{background:#0b0b10;border:1px solid var(--line);border-radius:11px;padding:13px 15px;overflow-x:auto;margin:13px 0;}
@@ -438,19 +439,27 @@ async function sendMessage(){const message=inp.value.trim();if(!message||busy)re
   const stepTick=setInterval(()=>{if(lastStep){const et=lastStep.querySelector('.et');if(et)et.textContent=((Date.now()-stepStart)/1000).toFixed(1)+'s';}},200);
   // ---- typewriter streaming: reveal text over time, re-render Markdown at most once per frame.
   //      (renders only the revealed prefix, so it never re-parses a huge string every chunk → no freeze/crash) ----
-  const CAP=180000,RENDER_MS=70;let text='',shown=0,raf=0,ended=false,lastR=0;
-  const render=final=>{let html;try{html=md(text.slice(0,shown));}catch{html='<pre>'+text.slice(0,shown).replace(/[&<]/g,c=>c==='&'?'&amp;':'&lt;')+'</pre>';}
-    bodyEl.innerHTML=html;if(!final){const last=bodyEl.lastElementChild;if(last){const c=document.createElement('span');c.className='caret';last.appendChild(c);}}down();};
-  // Advance the reveal every frame, but only re-parse Markdown + touch the DOM at most
-  // ~14x/sec (RENDER_MS). Keeps the heavy work off the frame budget so the globe never
-  // stalls, no matter how large the response.
+  const CAP=180000,RENDER_MS=60;let text='',shown=0,raf=0,ended=false,lastR=0;
+  // Incremental renderer: each COMPLETED Markdown block (up to the last blank line)
+  // is parsed ONCE into a stable container; only the small in-progress tail is
+  // re-parsed per tick. Per-frame cost stays tiny regardless of answer length, so
+  // the globe animation never stalls.
+  let built=false,stableEl,tailEl,stableLen=0;
+  const build=()=>{bodyEl.innerHTML='';stableEl=document.createElement('div');tailEl=document.createElement('div');
+    stableEl.className=tailEl.className='mdrun';bodyEl.append(stableEl,tailEl);built=true;};
+  const render=()=>{if(!built)build();
+    const nl=text.lastIndexOf('\n\n',shown-1);                       // last completed-block boundary within the revealed text
+    if(nl>=0&&nl+2>stableLen){try{stableEl.insertAdjacentHTML('beforeend',md(text.slice(stableLen,nl+2)));}catch{}stableLen=nl+2;}
+    const tail=text.slice(stableLen,shown);
+    try{tailEl.innerHTML=md(tail);}catch{tailEl.textContent=tail;}
+    const last=tailEl.lastElementChild||tailEl,c=document.createElement('span');c.className='caret';last.appendChild(c);down();};
+  const finalRender=()=>{try{bodyEl.innerHTML=text.trim()?md(text):'<p style="color:var(--muted)">Done.</p>';}catch{bodyEl.textContent=text;}down();};
   const pump=now=>{raf=0;const t=now||performance.now();
     if(shown<text.length){const bl=text.length-shown,step=bl>4000?Math.ceil(bl*0.3):Math.max(6,Math.ceil(bl*0.16));shown=Math.min(text.length,shown+step);}
     const caught=shown>=text.length;
-    if(!caught&&t-lastR<RENDER_MS){raf=requestAnimationFrame(pump);return;}   // throttle: reveal advanced, skip the costly render this frame
+    if(!caught&&t-lastR<RENDER_MS){raf=requestAnimationFrame(pump);return;}
     lastR=t;
-    try{if(caught&&ended){render(true);if(!text.trim())bodyEl.innerHTML='<p style="color:var(--muted)">Done.</p>';}
-      else{render(false);if(!caught)raf=requestAnimationFrame(pump);}}catch{}};
+    try{if(caught&&ended)finalRender();else{render();if(!caught)raf=requestAnimationFrame(pump);}}catch{}};
   const kick=()=>{if(!raf)raf=requestAnimationFrame(pump);};
   let lastEvt=Date.now(),timedOut=false,reader;
   const wd=setInterval(()=>{if(Date.now()-lastEvt>90000){timedOut=true;clearInterval(wd);try{reader&&reader.cancel();}catch{}}},4000);
@@ -464,7 +473,7 @@ async function sendMessage(){const message=inp.value.trim();if(!message||busy)re
         else if(ev.type==='done'){finish();thinkEl.style.display='none';ended=true;kick();setTimeout(LR_idle,1400);}}}
     ended=true;kick();
     if(timedOut&&!text.trim()){bodyEl.innerHTML='<p style="color:#f5b74e">The agent stopped responding (timed out). Please try again.</p>';LR_idle();}
-  }catch(err){thinkEl.style.display='none';ended=true;if(!text.trim()){LR_idle();bodyEl.innerHTML='<p style="color:#f87171">Connection error: '+err.message+'</p>';}else render(true);}
+  }catch(err){thinkEl.style.display='none';ended=true;if(!text.trim()){LR_idle();bodyEl.innerHTML='<p style="color:#f87171">Connection error: '+err.message+'</p>';}else finalRender();}
   finally{clearInterval(wd);clearInterval(stepTick);}
   busy=false;send.disabled=false;LR_busy(false);inp.focus();}
 send.onclick=sendMessage;
