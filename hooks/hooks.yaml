@@ -1,0 +1,24 @@
+hooks:
+  on_session_start:
+    - script: scripts/on-start.sh
+      description: Ensure reach tools are on PATH; note session-backed platforms
+      timeout: 10
+      compliance: false
+      fail_open: true
+
+  # THE governance centerpiece: hard-block write actions on every platform
+  # unless SCOUT_ALLOW_WRITES=1. This is what makes "read-only by default"
+  # enforced, not just documented.
+  pre_tool_use:
+    - script: scripts/read-only-guard.sh
+      description: Block post/like/follow/delete/etc. on all reach platforms
+      timeout: 10
+      compliance: true
+      fail_open: false
+
+  on_error:
+    - script: scripts/on-error.sh
+      description: Handle errors and escalate if needed
+      timeout: 10
+      compliance: false
+      fail_open: true

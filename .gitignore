@@ -1,0 +1,11 @@
+# secrets — never commit
+.env
+
+# gitclaw runtime state
+.gitagent/
+memory/.latest-frame.jpg
+memory/journal/
+memory/runtime/
+
+# skill_learner bookkeeping is stripped before commit; ignore stray caches
+**/.DS_Store

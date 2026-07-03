@@ -1,0 +1,85 @@
+spec_version: "0.1.0"
+name: scout
+version: 1.0.0
+description: >-
+  Governed internet-capability agent. Gives any GitAgent read access to
+  Twitter/X, Reddit, Facebook, Instagram, LinkedIn, YouTube, GitHub, Exa web
+  search, and any web page — by reusing the user's local sessions. Read-only by
+  default, write actions gated behind human approval, every fetch auditable.
+author: "Suyash Mankar"
+license: MIT
+tags:
+  - internet
+  - research
+  - social-listening
+  - web-search
+  - governed
+  - agent-reach
+
+model:
+  preferred: "anthropic:claude-sonnet-4-6"
+  fallback:
+    - openai:gpt-4o
+  constraints:
+    temperature: 0.2
+    max_tokens: 8192
+
+# Built-in tools (cli, read, write, memory) are available at runtime and are not
+# declared here — this list is for custom declarative tools only.
+tools: []
+
+skills:
+  - scout
+
+runtime:
+  max_turns: 20        # cap tool-call loops so the agent can't grind for a minute
+  timeout: 300
+
+# Governance is the whole point of shipping Agent Reach as a GitAgent.
+# Read-only by default; the pre_tool_use hook (hooks/scripts/read-only-guard.sh)
+# HARD-BLOCKS any write/post/like/follow/delete command unless SCOUT_ALLOW_WRITES=1.
+compliance:
+  risk_tier: standard
+  frameworks: []
+  supervision:
+    designated_supervisor: null
+    review_cadence: quarterly
+    human_in_the_loop: conditional
+    escalation_triggers:
+      - confidence_below: 0.7
+      - error_detected: true
+    override_capability: true
+    kill_switch: true
+  recordkeeping:
+    audit_logging: true
+    log_format: structured_json
+    retention_period: 6y
+    log_contents:
+      - prompts_and_responses
+      - tool_calls
+      - decision_pathways
+      - model_version
+      - timestamps
+    immutable: true
+  data_governance:
+    pii_handling: redact
+    data_classification: confidential
+    consent_required: true
+    cross_border: false
+    bias_testing: false
+    lda_search: false
+  communications:
+    type: correspondence
+    pre_review_required: true
+    fair_balanced: true
+    no_misleading: true
+    disclosures_required: false
+  vendor_management:
+    due_diligence_complete: false
+    soc_report_required: false
+    vendor_ai_notification: true
+    subcontractor_assessment: false
+
+metadata:
+  ports: "Agent Reach (github.com/Panniantong/Agent-Reach)"
+  access_model: "local session reuse — nothing leaves the machine"
