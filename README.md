@@ -10,6 +10,8 @@ storage, nothing leaves your machine.
 It ships with a self-contained web UI (a reactive 3D globe + galaxy view and a
 streaming chat) so anyone who forks it gets a working experience out of the box.
 
+![Scout — reactive globe UI with streaming chat](assets/scout-ui.png)
+
 > Scout is a port of **[Agent Reach](https://github.com/Panniantong/Agent-Reach)**
 > into the **GitAgent** format, run by the **[GitClaw](https://www.npmjs.com/package/gitclaw)**
 > runtime — wrapped in governance (read-only by default), an audit trail (git),
