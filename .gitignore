@@ -9,3 +9,6 @@ memory/runtime/
 
 # skill_learner bookkeeping is stripped before commit; ignore stray caches
 **/.DS_Store
+
+# internal handoff notes — not for the public repo
+Context.md
