@@ -17,8 +17,13 @@ if [ "${SCOUT_ALLOW_WRITES:-0}" = "1" ]; then
   exit 0
 fi
 
-# Extract the shell command from the tool payload (best-effort, no jq dependency).
-tool="$(printf '%s' "$payload" | sed -n 's/.*"toolName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+# Extract the tool name + shell command from the payload (best-effort, no jq).
+# gitclaw sends the tool name under the key "tool" (see pi-agent hooks: the
+# hook input is { event, session_id, tool, args }). Older/other runtimes used
+# "toolName", so fall back to that — otherwise this variable comes back empty
+# and the guard waves every write through.
+tool="$(printf '%s' "$payload" | sed -n 's/.*"tool"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+[ -z "$tool" ] && tool="$(printf '%s' "$payload" | sed -n 's/.*"toolName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
 cmd="$(printf '%s' "$payload"  | sed -n 's/.*"command"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/p'  | head -1)"
 
 # Only police the cli tool; everything else passes.
