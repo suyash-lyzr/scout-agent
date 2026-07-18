@@ -4,8 +4,9 @@
 
 Scout is a governed, git-native AI agent that reads **Twitter/X, Reddit, YouTube,
 GitHub, LinkedIn, Facebook, Instagram, Exa web search, and any web page** — by
-reusing the sessions already in *your* browser. No API fees, no cloud cookie
-storage, nothing leaves your machine.
+reusing the sessions already in *your* browser. Core routes have no API fees,
+and an optional Xquik backend adds structured X reads. Browser session
+credentials stay local.
 
 It ships with a self-contained web UI (a reactive 3D globe + galaxy view and a
 streaming chat) so anyone who forks it gets a working experience out of the box.
@@ -43,7 +44,7 @@ calls it directly — it never proxies or re-implements fetching.
 | YouTube | `yt-dlp` | **No** |
 | GitHub | `gh` | **No** (public) |
 | LinkedIn (public pages) | Jina Reader | **No** |
-| Twitter / X | `twitter-cli` | Be logged into X in your browser |
+| Twitter / X | Xquik API or `twitter-cli` | API key or browser login |
 | Reddit | OpenCLI | Be logged into Reddit + OpenCLI |
 | Facebook | OpenCLI | Be logged into Facebook + OpenCLI |
 | Instagram | OpenCLI | Be logged into Instagram + OpenCLI |
@@ -87,6 +88,8 @@ immediately**. Add the optional tools below to unlock the rest.
 
 These reuse your **existing** browser logins — you don't create new accounts.
 
+- **Twitter / X with Xquik** - optionally set `XQUIK_API_KEY` in `.env` for
+  structured API reads. Leave it empty to use the local browser backend.
 - **Twitter / X** — install [`twitter-cli`](https://pypi.org/project/twitter-cli/),
   and be logged into X in your browser. Scout reads whatever account is active;
   pin a specific one with `TWITTER_BROWSER` / `TWITTER_CHROME_PROFILE` in `.env`.
@@ -164,3 +167,5 @@ cd my-research-agent
 - Upstream tools: `yt-dlp`, `gh`, Jina Reader, Exa, `twitter-cli`, OpenCLI.
 
 MIT · a port of Agent Reach · built on GitAgent / GitClaw.
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.
