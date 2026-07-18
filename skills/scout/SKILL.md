@@ -55,22 +55,21 @@ yt-dlp --write-sub --write-auto-sub --skip-download -o "/tmp/%(id)s" "<URL>"  # 
 ```
 For "find videos about X" use `ytsearchN:`; never fetch the results page (it 403s).
 
-### 🐦 Twitter/X  — Xquik API or local cookie backends (read-only)
+### 🐦 Twitter/X - Xquik API or local cookie backends (read-only)
 
 When `XQUIK_API_KEY` is already configured, prefer the structured Xquik read
-routes. Never print the key. Keys beginning with `xq_` use the `x-api-key`
-header:
+routes. Never print the key. Send it through the `x-api-key` header:
 
 ```bash
-curl -sS --get "https://xquik.com/api/v1/x/tweets/search" \
+curl -fsS --get "https://xquik.com/api/v1/x/tweets/search" \
   -H "x-api-key: ${XQUIK_API_KEY}" \
   --data-urlencode "q=<query>" \
   --data-urlencode "limit=10"
 
-curl -sS "https://xquik.com/api/v1/x/tweets/<tweet-id>" \
+curl -fsS "https://xquik.com/api/v1/x/tweets/<tweet-id>" \
   -H "x-api-key: ${XQUIK_API_KEY}"
 
-curl -sS "https://xquik.com/api/v1/x/users/<handle>/tweets" \
+curl -fsS "https://xquik.com/api/v1/x/users/<handle>/tweets" \
   -H "x-api-key: ${XQUIK_API_KEY}"
 ```
 

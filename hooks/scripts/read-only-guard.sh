@@ -18,12 +18,22 @@ if [ "${SCOUT_ALLOW_WRITES:-0}" = "1" ]; then
 fi
 
 # Extract the shell command from the tool payload (best-effort, no jq dependency).
-tool="$(printf '%s' "$payload" | sed -n 's/.*"toolName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+# GitClaw uses `tool`; retain `toolName` as a fallback for older runtimes.
+tool="$(printf '%s' "$payload" | sed -n 's/.*"tool"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+if [ -z "$tool" ]; then
+  tool="$(printf '%s' "$payload" | sed -n 's/.*"toolName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+fi
 cmd="$(printf '%s' "$payload"  | sed -n 's/.*"command"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/p'  | head -1)"
 
 # Only police the cli tool; everything else passes.
-if [ "$tool" != "cli" ] || [ -z "$cmd" ]; then
+if [ "$tool" != "cli" ]; then
   printf '{"action":"allow"}'
+  exit 0
+fi
+
+# A cli payload without a readable command cannot be classified safely.
+if [ -z "$cmd" ]; then
+  printf '{"action":"block","reason":"Blocked by Scout: missing CLI command. Read-only policy could not classify this request."}'
   exit 0
 fi
 
@@ -34,10 +44,7 @@ lc="$(printf '%s' "$cmd" | tr '[:upper:]' '[:lower:]')"
 write_re='(^|[[:space:]])(post|tweet|reply|quote|retweet|unretweet|like|unlike|favorite|unfavorite|follow|unfollow|bookmark|unbookmark|delete|remove|comment|upvote|downvote|save|publish|send|dm)([[:space:]]|$)'
 
 if printf '%s' "$lc" | grep -Eq "$write_re"; then
-  reason="Blocked by Scout: '$cmd' looks like a WRITE action. Read-only by default. To allow, confirm with the user and set SCOUT_ALLOW_WRITES=1."
-  # JSON-escape the reason (quotes/backslashes).
-  esc="$(printf '%s' "$reason" | sed 's/\\/\\\\/g; s/"/\\"/g')"
-  printf '{"action":"block","reason":"%s"}' "$esc"
+  printf '{"action":"block","reason":"Blocked by Scout: CLI command looks like a write action. Confirm with the user and set SCOUT_ALLOW_WRITES=1 to allow it."}'
   exit 0
 fi
 

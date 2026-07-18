@@ -17,11 +17,11 @@ Like Agent Reach: switching a backend = reordering, not rewriting.
 
 ## Known environment fixes (this deployment)
 
-### Xquik — optional API key
+### Xquik - optional API key
 
 Xquik provides structured read routes for search, tweet details, and account
-timelines. Use it only when `XQUIK_API_KEY` is already set. Keys beginning with
-`xq_` use the `x-api-key` header. Never echo the key or place it in a command
+timelines. Use it only when `XQUIK_API_KEY` is already set. Send the configured
+key through the `x-api-key` header. Never echo the key or place it in a command
 history entry as a literal value. A missing key is a normal signal to continue
 with `twitter-cli`; it is not an error to retry.
 
